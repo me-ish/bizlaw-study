@@ -97,6 +97,15 @@ export default function HomePage() {
       badge: "高速演習",
       badgeColor: "bg-orange-100 text-orange-700",
     },
+    {
+      href: "/schedule",
+      emoji: "📅",
+      title: "学習スケジュール",
+      desc: "試験日を登録して残り日数に応じた今日のタスクを確認。",
+      color: "border-sky-300 hover:border-sky-400",
+      badge: "計画管理",
+      badgeColor: "bg-sky-100 text-sky-700",
+    },
   ];
 
   return (

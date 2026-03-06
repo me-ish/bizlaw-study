@@ -5,6 +5,7 @@ import { useState } from "react";
 
 const links = [
   { href: "/", label: "ホーム" },
+  { href: "/schedule", label: "スケジュール" },
   { href: "/notes", label: "まとめノート" },
   { href: "/quiz", label: "模擬テスト" },
   { href: "/flashcards", label: "単語帳" },
