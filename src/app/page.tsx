@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getQuizProgress, getFlashcardProgress, resetQuizProgress, resetFlashcardProgress } from "@/lib/progress";
+import { getQuizProgress, getFlashcardProgress, resetQuizProgress, resetFlashcardProgress, resetNotesProgress, type TopicStat } from "@/lib/progress";
 import { questions, TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
 import { flashcards } from "@/data/flashcards";
 
@@ -9,7 +9,7 @@ export default function HomePage() {
   const [quizPct, setQuizPct] = useState(0);
   const [cardPct, setCardPct] = useState(0);
   const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [topicAccuracy, setTopicAccuracy] = useState<Record<Topic, { correct: number; total: number }> | null>(null);
+  const [topicStats, setTopicStats] = useState<Record<string, TopicStat>>({});
 
   useEffect(() => {
     const qp = getQuizProgress();
@@ -19,16 +19,18 @@ export default function HomePage() {
     if (qp.answered > 0) {
       setAccuracy(Math.round((qp.correct / qp.answered) * 100));
     }
+    setTopicStats(qp.topicStats ?? {});
   }, []);
 
   function handleReset() {
     if (!confirm("学習進捗をリセットしますか？")) return;
     resetQuizProgress();
     resetFlashcardProgress();
+    resetNotesProgress();
     setQuizPct(0);
     setCardPct(0);
     setAccuracy(null);
-    setTopicAccuracy(null);
+    setTopicStats({});
   }
 
   const topicList = Object.keys(TOPIC_LABELS) as Topic[];
@@ -85,6 +87,15 @@ export default function HomePage() {
       color: "border-rose-300 hover:border-rose-400",
       badge: "直前対策",
       badgeColor: "bg-rose-100 text-rose-700",
+    },
+    {
+      href: "/quick",
+      emoji: "🎯",
+      title: "一問一答",
+      desc: `全${questions.length}問・問題を見て○×で高速自己採点。大量インプットに最適。`,
+      color: "border-orange-300 hover:border-orange-400",
+      badge: "高速演習",
+      badgeColor: "bg-orange-100 text-orange-700",
     },
   ];
 
@@ -146,6 +157,34 @@ export default function HomePage() {
               ) : (
                 <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">目標70%まであと{70 - accuracy}%</span>
               )}
+            </div>
+          )}
+          {Object.keys(topicStats).length > 0 && (
+            <div className="pt-2 space-y-1.5">
+              <p className="text-xs text-slate-400 font-medium">分野別正答率</p>
+              {(Object.keys(TOPIC_LABELS) as Topic[]).map((topic) => {
+                const stat = topicStats[topic];
+                if (!stat || stat.answered === 0) return null;
+                const pct = Math.round((stat.correct / stat.answered) * 100);
+                return (
+                  <div key={topic}>
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${TOPIC_COLORS[topic]}`}>
+                        {TOPIC_LABELS[topic]}
+                      </span>
+                      <span className={`font-medium ${pct >= 70 ? "text-green-600" : "text-rose-500"}`}>
+                        {pct}% ({stat.correct}/{stat.answered})
+                      </span>
+                    </div>
+                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${pct >= 70 ? "bg-green-400" : pct >= 50 ? "bg-amber-400" : "bg-rose-400"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ const links = [
   { href: "/notes", label: "まとめノート" },
   { href: "/quiz", label: "模擬テスト" },
   { href: "/flashcards", label: "単語帳" },
+  { href: "/quick", label: "一問一答" },
   { href: "/glossary", label: "用語集" },
   { href: "/review", label: "直前チェック" },
 ];
