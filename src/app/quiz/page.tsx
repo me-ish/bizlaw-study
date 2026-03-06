@@ -14,14 +14,20 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+interface QuizResult {
+  pool: typeof questions;
+  score: number;
+  wrongIds: number[];
+}
+
 export default function QuizPage() {
   const [mode, setMode] = useState<Mode>("select");
-  const [selectedTopic, setSelectedTopic] = useState<Topic | "all">("all");
   const [pool, setPool] = useState(questions);
   const [idx, setIdx] = useState(0);
   const [chosen, setChosen] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [wrongIds, setWrongIds] = useState<number[]>([]);
+  const [result, setResult] = useState<QuizResult | null>(null);
 
   const current = pool[idx];
 
@@ -43,6 +49,7 @@ export default function QuizPage() {
     setChosen(null);
     setScore(0);
     setWrongIds([]);
+    setResult(null);
     setMode("quiz");
   }, []);
 
@@ -59,19 +66,26 @@ export default function QuizPage() {
 
   function handleNext() {
     if (idx + 1 >= pool.length) {
+      const finalScore = score + (chosen === current.correctAnswer ? 1 : 0);
+      const finalWrongIds = chosen === current.correctAnswer
+        ? wrongIds
+        : [...wrongIds, current.id];
+
       // save progress
       const prev = getQuizProgress();
-      const newWrong = Array.from(
-        new Set([...prev.incorrectIds, ...wrongIds].filter((id) => !pool.slice(0, idx + 1).some((q) => q.id === id && !wrongIds.includes(id))))
+      const answeredCorrectlyIds = pool
+        .map((q) => q.id)
+        .filter((id) => !finalWrongIds.includes(id));
+      const finalWrong = [...new Set([...prev.incorrectIds, ...finalWrongIds])].filter(
+        (id) => !answeredCorrectlyIds.includes(id)
       );
-      // correct: remove from incorrect list if answered correctly now
-      const answeredCorrectlyIds = pool.slice(0, idx + 1).map((q) => q.id).filter((id) => !wrongIds.includes(id));
-      const finalWrong = [...new Set([...prev.incorrectIds, ...wrongIds])].filter((id) => !answeredCorrectlyIds.includes(id));
       saveQuizProgress({
         answered: prev.answered + pool.length,
-        correct: prev.correct + score + (chosen === current.correctAnswer ? 1 : 0),
+        correct: prev.correct + finalScore,
         incorrectIds: finalWrong,
       });
+
+      setResult({ pool, score: finalScore, wrongIds: finalWrongIds });
       setMode("result");
     } else {
       setIdx((i) => i + 1);
@@ -96,18 +110,21 @@ export default function QuizPage() {
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <h2 className="font-semibold text-slate-600 mb-3">分野を選んで開始</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {topicOptions.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => startQuiz(t.value as Topic | "all")}
-                className="px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
-              >
-                {t.label}
-                <span className="ml-1 text-xs text-slate-400">
-                  ({t.value === "all" ? questions.length : questions.filter((q) => q.topic === t.value).length}問)
-                </span>
-              </button>
-            ))}
+            {topicOptions.map((t) => {
+              const count = t.value === "all"
+                ? questions.length
+                : questions.filter((q) => q.topic === t.value).length;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => startQuiz(t.value as Topic | "all")}
+                  className="px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                >
+                  {t.label}
+                  <span className="ml-1 text-xs text-slate-400">({count}問)</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -129,34 +146,104 @@ export default function QuizPage() {
     );
   }
 
-  if (mode === "result") {
-    const total = pool.length;
-    const pct = Math.round((score / total) * 100);
+  if (mode === "result" && result) {
+    const { pool: resultPool, score: finalScore, wrongIds: finalWrong } = result;
+    const total = resultPool.length;
+    const pct = Math.round((finalScore / total) * 100);
+
+    // Per-topic breakdown
+    const topicMap: Record<string, { total: number; correct: number }> = {};
+    for (const q of resultPool) {
+      if (!topicMap[q.topic]) topicMap[q.topic] = { total: 0, correct: 0 };
+      topicMap[q.topic].total += 1;
+      if (!finalWrong.includes(q.id)) topicMap[q.topic].correct += 1;
+    }
+    const topicEntries = Object.entries(topicMap) as [Topic, { total: number; correct: number }][];
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <h1 className="text-xl font-bold text-slate-700">結果</h1>
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
+
+        {/* Score */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 text-center shadow-sm">
           <div className={`text-6xl font-bold mb-2 ${pct >= 70 ? "text-green-500" : "text-rose-500"}`}>
             {pct}%
           </div>
           <p className="text-slate-500 mb-1">
-            {total}問中 <span className="font-semibold text-slate-700">{score}問</span> 正解
+            {total}問中 <span className="font-semibold text-slate-700">{finalScore}問</span> 正解
           </p>
           {pct >= 70 ? (
             <p className="text-green-600 font-medium">合格ライン達成！</p>
           ) : (
             <p className="text-rose-500 font-medium">もう少し！苦手分野を復習しましょう。</p>
           )}
+          <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${pct >= 70 ? "bg-green-500" : "bg-rose-400"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs text-slate-400 mt-1">合格ライン: 70%</p>
         </div>
+
+        {/* Per-topic breakdown (only if multiple topics) */}
+        {topicEntries.length > 1 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <h2 className="font-semibold text-slate-700 mb-3 text-sm">分野別スコア</h2>
+            <div className="space-y-2">
+              {topicEntries.map(([topic, stats]) => {
+                const topicPct = Math.round((stats.correct / stats.total) * 100);
+                return (
+                  <div key={topic}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${TOPIC_COLORS[topic]}`}>
+                        {TOPIC_LABELS[topic]}
+                      </span>
+                      <span className="text-slate-600 font-medium">
+                        {stats.correct}/{stats.total}問 ({topicPct}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${topicPct >= 70 ? "bg-green-400" : topicPct >= 50 ? "bg-amber-400" : "bg-rose-400"}`}
+                        style={{ width: `${topicPct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Weak topics hint */}
+        {(() => {
+          if (topicEntries.length <= 1) return null;
+          const weak = topicEntries.filter(([, s]) => s.total > 0 && s.correct / s.total < 0.7);
+          if (weak.length === 0) return null;
+          return (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm font-semibold text-amber-800 mb-1">復習推奨の分野</p>
+              <div className="flex flex-wrap gap-2">
+                {weak.map(([topic]) => (
+                  <span key={topic} className={`text-xs px-2 py-0.5 rounded-full font-medium ${TOPIC_COLORS[topic]}`}>
+                    {TOPIC_LABELS[topic]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="flex gap-3">
           <button
-            onClick={() => setMode("select")}
+            onClick={() => startQuiz("all")}
             className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
           >
-            もう一度
+            もう一度（全分野）
           </button>
           <button
-            onClick={() => { setMode("select"); }}
+            onClick={() => setMode("select")}
             className="flex-1 px-4 py-2 border border-slate-300 rounded-lg font-medium hover:bg-slate-50 transition-colors"
           >
             分野選択に戻る

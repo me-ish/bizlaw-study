@@ -31,7 +31,20 @@ export default function NotesPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-slate-700">まとめノート</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-700">まとめノート</h1>
+        <div className="flex gap-3 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-rose-400" />頻出
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />混同注意
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-400" />暗記
+          </span>
+        </div>
+      </div>
 
       {/* Topic tabs */}
       <div className="flex flex-wrap gap-2">
@@ -87,10 +100,17 @@ export default function NotesPage() {
                 <span className="text-slate-400 text-lg">{isOpen ? "−" : "+"}</span>
               </button>
               {isOpen && (
-                <div className="px-5 pb-4 space-y-2">
+                <div className="px-5 pb-4 space-y-1.5">
                   {sec.points.map((pt, j) => (
                     <PointItem key={j} text={pt} />
                   ))}
+                  {sec.examTips && sec.examTips.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {sec.examTips.map((tip, k) => (
+                        <ExamTip key={k} text={tip} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -117,7 +137,6 @@ export default function NotesPage() {
 }
 
 function PointItem({ text }: { text: string }) {
-  // Bold text inside 【 】 brackets
   const parts = text.split(/(【[^】]*】)/g);
   return (
     <div className="flex gap-2 text-sm text-slate-700 leading-relaxed">
@@ -131,6 +150,47 @@ function PointItem({ text }: { text: string }) {
           )
         )}
       </p>
+    </div>
+  );
+}
+
+function ExamTip({ text }: { text: string }) {
+  const isFrequent = text.includes("【頻出】");
+  const isConfuse = text.includes("【混同注意】");
+  const isMemorize = text.includes("【暗記】");
+
+  let bgColor = "bg-slate-50 border-slate-200";
+  let dotColor = "bg-slate-400";
+  let label = "";
+
+  if (isFrequent) {
+    bgColor = "bg-rose-50 border-rose-200";
+    dotColor = "bg-rose-400";
+    label = "頻出";
+  } else if (isConfuse) {
+    bgColor = "bg-amber-50 border-amber-200";
+    dotColor = "bg-amber-400";
+    label = "混同注意";
+  } else if (isMemorize) {
+    bgColor = "bg-blue-50 border-blue-200";
+    dotColor = "bg-blue-400";
+    label = "暗記";
+  }
+
+  const cleanText = text
+    .replace("【頻出】", "")
+    .replace("【混同注意】", "")
+    .replace("【暗記】", "");
+
+  return (
+    <div className={`flex gap-2 text-xs rounded-lg border px-3 py-2 ${bgColor}`}>
+      <span className={`mt-0.5 shrink-0 w-2 h-2 rounded-full ${dotColor} inline-block`} />
+      <div>
+        {label && (
+          <span className="font-bold mr-1 text-slate-600">[{label}]</span>
+        )}
+        <span className="text-slate-700">{cleanText}</span>
+      </div>
     </div>
   );
 }

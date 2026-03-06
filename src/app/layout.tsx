@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "ビジ法2級 合格道場",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-50 text-slate-800">
         <Navbar />
         <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
