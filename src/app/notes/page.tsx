@@ -1,16 +1,38 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { notes } from "@/data/notes";
 import { TOPIC_COLORS, TOPIC_LABELS } from "@/data/questions";
+import { getNotesProgress, saveNotesProgress } from "@/lib/progress";
 
 export default function NotesPage() {
   const [activeId, setActiveId] = useState<number>(1);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [readTopics, setReadTopics] = useState<Set<string>>(new Set());
 
   const current = notes.find((n) => n.id === activeId) ?? notes[0];
 
+  useEffect(() => {
+    const np = getNotesProgress();
+    setReadTopics(new Set(np.readTopics));
+  }, []);
+
+  function markAsRead(topic: string) {
+    setReadTopics((prev) => {
+      const next = new Set(prev);
+      next.add(topic);
+      saveNotesProgress({ readTopics: Array.from(next) });
+      return next;
+    });
+  }
+
   function toggleSection(key: string) {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpenSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      // 全セクションが開いていたら既読扱い
+      const allOpen = current.sections.every((_, i) => next[`${current.id}-${i}`] !== false);
+      if (allOpen) markAsRead(current.topic);
+      return next;
+    });
   }
 
   function expandAll() {
@@ -19,6 +41,8 @@ export default function NotesPage() {
       all[`${current.id}-${i}`] = true;
     });
     setOpenSections((prev) => ({ ...prev, ...all }));
+    // 全展開したら既読扱い
+    markAsRead(current.topic);
   }
 
   function collapseAll() {
@@ -48,20 +72,40 @@ export default function NotesPage() {
 
       {/* Topic tabs */}
       <div className="flex flex-wrap gap-2">
-        {notes.map((n) => (
-          <button
-            key={n.id}
-            onClick={() => setActiveId(n.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              activeId === n.id
-                ? "bg-teal-600 text-white shadow-sm"
-                : "bg-white border border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-700"
-            }`}
-          >
-            {TOPIC_LABELS[n.topic]}
-          </button>
-        ))}
+        {notes.map((n) => {
+          const isRead = readTopics.has(n.topic);
+          return (
+            <button
+              key={n.id}
+              onClick={() => setActiveId(n.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                activeId === n.id
+                  ? "bg-teal-600 text-white shadow-sm"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-700"
+              }`}
+            >
+              {TOPIC_LABELS[n.topic]}
+              {isRead && (
+                <span className={`text-xs ${activeId === n.id ? "text-teal-200" : "text-teal-500"}`}>✓</span>
+              )}
+            </button>
+          );
+        })}
       </div>
+      <p className="text-xs text-slate-400">
+        {readTopics.size}/{notes.length} 分野 既読
+        {readTopics.size > 0 && (
+          <button
+            className="ml-2 text-slate-300 hover:text-rose-400 transition-colors"
+            onClick={() => {
+              setReadTopics(new Set());
+              saveNotesProgress({ readTopics: [] });
+            }}
+          >
+            リセット
+          </button>
+        )}
+      </p>
 
       {/* Note header */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">

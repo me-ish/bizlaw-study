@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { flashcards, type Flashcard } from "@/data/flashcards";
 import { TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
 import { getFlashcardProgress, saveFlashcardProgress } from "@/lib/progress";
@@ -19,6 +19,8 @@ export default function FlashcardsPage() {
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [masteredIds, setMasteredIds] = useState<number[]>([]);
+  const [sessionCorrect, setSessionCorrect] = useState(0);
+  const [sessionTotal, setSessionTotal] = useState(0);
 
   useEffect(() => {
     const fp = getFlashcardProgress();
@@ -33,6 +35,8 @@ export default function FlashcardsPage() {
     setPool(shuffle(filtered));
     setIdx(0);
     setFlipped(false);
+    setSessionCorrect(0);
+    setSessionTotal(0);
   }, [topicFilter]);
 
   const current = pool[idx];
@@ -42,38 +46,64 @@ export default function FlashcardsPage() {
     let updated: number[];
     if (mastered && current) {
       updated = Array.from(new Set([...prev.masteredIds, current.id]));
+      setSessionCorrect((n) => n + 1);
     } else if (current) {
       updated = prev.masteredIds.filter((id) => id !== current.id);
     } else {
       updated = prev.masteredIds;
     }
+    setSessionTotal((n) => n + 1);
     setMasteredIds(updated);
     saveFlashcardProgress({ masteredIds: updated });
     goNext();
   }
 
-  function goNext() {
+  const goNext = useCallback(() => {
     setFlipped(false);
     setTimeout(() => setIdx((i) => (i + 1) % pool.length), 50);
-  }
+  }, [pool.length]);
 
-  function goPrev() {
+  const goPrev = useCallback(() => {
     setFlipped(false);
     setTimeout(() => setIdx((i) => (i - 1 + pool.length) % pool.length), 50);
-  }
+  }, [pool.length]);
+
+  const flipCard = useCallback(() => setFlipped((f) => !f), []);
+
+  // キーボード操作
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight" || e.key === "l") goNext();
+      else if (e.key === "ArrowLeft" || e.key === "h") goPrev();
+      else if (e.key === " " || e.key === "Enter") { e.preventDefault(); flipCard(); }
+      else if ((e.key === "m" || e.key === "M") && flipped) handleMastered(true);
+      else if ((e.key === "r" || e.key === "R") && flipped) handleMastered(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [goNext, goPrev, flipCard, flipped]);
 
   const isMastered = current ? masteredIds.includes(current.id) : false;
   const masteredInPool = pool.filter((c) => masteredIds.includes(c.id)).length;
-
   const topics = Array.from(new Set(flashcards.map((c) => c.topic)));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-700">単語帳</h1>
         <span className="text-sm text-slate-500">
           マスター: {masteredIds.length} / {flashcards.length}
         </span>
+      </div>
+
+      {/* Keyboard hint */}
+      <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+        <span>キーボード操作:</span>
+        <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5">Space</kbd><span>裏返す</span>
+        <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5">←→</kbd><span>前後</span>
+        <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5">M</kbd><span>マスター</span>
+        <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5">R</kbd><span>もう一度</span>
       </div>
 
       {/* Topic filter */}
@@ -108,7 +138,14 @@ export default function FlashcardsPage() {
         <div>
           <div className="flex justify-between text-sm text-slate-500 mb-1">
             <span>{idx + 1} / {pool.length}</span>
-            <span>マスター: {masteredInPool} / {pool.length}</span>
+            <div className="flex gap-3">
+              {sessionTotal > 0 && (
+                <span className="text-violet-600 font-medium">
+                  今回: {sessionCorrect}/{sessionTotal}
+                </span>
+              )}
+              <span>マスター: {masteredInPool} / {pool.length}</span>
+            </div>
           </div>
           <div className="h-1.5 bg-slate-100 rounded-full">
             <div
@@ -125,8 +162,8 @@ export default function FlashcardsPage() {
           <div className={`flip-card-inner w-full h-full ${flipped ? "flipped" : ""}`}>
             {/* Front */}
             <div
-              className="flip-card-front w-full h-full bg-white border-2 border-violet-300 rounded-2xl shadow-md flex flex-col items-center justify-center p-6 cursor-pointer select-none"
-              onClick={() => setFlipped(true)}
+              className="flip-card-front w-full h-full bg-white border-2 border-violet-300 rounded-2xl shadow-md flex flex-col items-center justify-center p-6 cursor-pointer select-none relative"
+              onClick={flipCard}
             >
               <span className={`text-xs px-2 py-1 rounded-full font-medium mb-4 ${TOPIC_COLORS[current.topic]}`}>
                 {TOPIC_LABELS[current.topic]}
@@ -137,7 +174,7 @@ export default function FlashcardsPage() {
               {current.reading && (
                 <p className="text-sm text-slate-400">{current.reading}</p>
               )}
-              <p className="text-xs text-violet-400 mt-6">タップして定義を確認</p>
+              <p className="text-xs text-violet-400 mt-6">タップ / Space で定義を確認</p>
               {isMastered && (
                 <span className="absolute top-4 right-4 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
                   マスター済
@@ -148,7 +185,7 @@ export default function FlashcardsPage() {
             {/* Back */}
             <div
               className="flip-card-back w-full bg-violet-50 border-2 border-violet-300 rounded-2xl shadow-md flex flex-col p-6 cursor-pointer select-none overflow-y-auto"
-              onClick={() => setFlipped(false)}
+              onClick={flipCard}
               style={{ minHeight: "320px" }}
             >
               <p className="text-lg font-bold text-violet-800 mb-3">{current.term}</p>
@@ -175,13 +212,13 @@ export default function FlashcardsPage() {
               onClick={goPrev}
               className="flex-1 py-2 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              前へ
+              ← 前へ
             </button>
             <button
               onClick={goNext}
               className="flex-1 py-2 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              次へ
+              次へ →
             </button>
           </div>
           <div className="flex gap-3">
@@ -189,7 +226,7 @@ export default function FlashcardsPage() {
               onClick={() => handleMastered(false)}
               className="flex-1 py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm font-medium hover:bg-rose-100 transition-colors"
             >
-              もう一度
+              R: もう一度
             </button>
             <button
               onClick={() => handleMastered(true)}
@@ -199,7 +236,7 @@ export default function FlashcardsPage() {
                   : "bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
               }`}
             >
-              {isMastered ? "マスター済" : "マスター！"}
+              M: {isMastered ? "マスター済" : "マスター！"}
             </button>
           </div>
         </div>

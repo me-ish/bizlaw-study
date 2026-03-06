@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { questions, TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
-import { getQuizProgress, saveQuizProgress } from "@/lib/progress";
+import { getQuizProgress, saveQuizResult } from "@/lib/progress";
 
 type Mode = "select" | "quiz" | "result";
 
@@ -66,24 +66,13 @@ export default function QuizPage() {
 
   function handleNext() {
     if (idx + 1 >= pool.length) {
-      const finalScore = score + (chosen === current.correctAnswer ? 1 : 0);
       const finalWrongIds = chosen === current.correctAnswer
         ? wrongIds
         : [...wrongIds, current.id];
+      const finalScore = pool.length - finalWrongIds.length;
 
-      // save progress
-      const prev = getQuizProgress();
-      const answeredCorrectlyIds = pool
-        .map((q) => q.id)
-        .filter((id) => !finalWrongIds.includes(id));
-      const finalWrong = [...new Set([...prev.incorrectIds, ...finalWrongIds])].filter(
-        (id) => !answeredCorrectlyIds.includes(id)
-      );
-      saveQuizProgress({
-        answered: prev.answered + pool.length,
-        correct: prev.correct + finalScore,
-        incorrectIds: finalWrong,
-      });
+      // save progress (including per-topic stats)
+      saveQuizResult(pool, finalWrongIds);
 
       setResult({ pool, score: finalScore, wrongIds: finalWrongIds });
       setMode("result");
