@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { flashcards, type Flashcard } from "@/data/flashcards";
 import { TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
 import { getFlashcardProgress, saveFlashcardProgress } from "@/lib/progress";
@@ -14,6 +15,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function FlashcardsPage() {
+  const params = useParams();
+  const examId = params.examId as string;
   const [topicFilter, setTopicFilter] = useState<Topic | "all">("all");
   const [pool, setPool] = useState<Flashcard[]>([]);
   const [idx, setIdx] = useState(0);
@@ -23,7 +26,7 @@ export default function FlashcardsPage() {
   const [sessionTotal, setSessionTotal] = useState(0);
 
   useEffect(() => {
-    const fp = getFlashcardProgress();
+    const fp = getFlashcardProgress(examId);
     setMasteredIds(fp.masteredIds);
   }, []);
 
@@ -42,7 +45,7 @@ export default function FlashcardsPage() {
   const current = pool[idx];
 
   function handleMastered(mastered: boolean) {
-    const prev = getFlashcardProgress();
+    const prev = getFlashcardProgress(examId);
     let updated: number[];
     if (mastered && current) {
       updated = Array.from(new Set([...prev.masteredIds, current.id]));
@@ -54,7 +57,7 @@ export default function FlashcardsPage() {
     }
     setSessionTotal((n) => n + 1);
     setMasteredIds(updated);
-    saveFlashcardProgress({ masteredIds: updated });
+    saveFlashcardProgress(examId, { masteredIds: updated });
     goNext();
   }
 

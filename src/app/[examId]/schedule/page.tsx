@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { getQuizProgress, getFlashcardProgress, getNotesProgress } from "@/lib/progress";
 import { questions } from "@/data/questions";
 import { flashcards } from "@/data/flashcards";
 import { notes } from "@/data/notes";
 
-const EXAM_DATE_KEY = "bizlaw_exam_date";
+// EXAM_DATE_KEY is defined dynamically per exam below
 
 type Phase = "note" | "flashcard" | "quiz" | "review";
 
@@ -18,7 +19,7 @@ interface DayPlan {
   tasks: { href: string; label: string; desc: string }[];
 }
 
-function getPhase(daysLeft: number): DayPlan {
+function getPhase(daysLeft: number, examId: string): DayPlan {
   if (daysLeft > 30) {
     return {
       phase: "note",
@@ -26,8 +27,8 @@ function getPhase(daysLeft: number): DayPlan {
       icon: "📖",
       color: "teal",
       tasks: [
-        { href: "/notes", label: "まとめノートを読む", desc: "全7分野の概要を把握する。頻出マーカーに注目。" },
-        { href: "/flashcards", label: "単語帳で用語を確認", desc: "各分野の重要用語を流し見する。" },
+        { href: `/${examId}/notes`, label: "まとめノートを読む", desc: "全7分野の概要を把握する。頻出マーカーに注目。" },
+        { href: `/${examId}/flashcards`, label: "単語帳で用語を確認", desc: "各分野の重要用語を流し見する。" },
       ],
     };
   }
@@ -38,8 +39,8 @@ function getPhase(daysLeft: number): DayPlan {
       icon: "🃏",
       color: "violet",
       tasks: [
-        { href: "/flashcards", label: "単語帳をマスターする", desc: "まだマスターしていないカードを集中的に覚える。" },
-        { href: "/quick", label: "一問一答で高速チェック", desc: "問題を見て即答できるか確認する。" },
+        { href: `/${examId}/flashcards`, label: "単語帳をマスターする", desc: "まだマスターしていないカードを集中的に覚える。" },
+        { href: `/${examId}/quick`, label: "一問一答で高速チェック", desc: "問題を見て即答できるか確認する。" },
       ],
     };
   }
@@ -50,8 +51,8 @@ function getPhase(daysLeft: number): DayPlan {
       icon: "📝",
       color: "indigo",
       tasks: [
-        { href: "/quiz", label: "模擬テストを解く", desc: "苦手分野を中心に繰り返し解く。目標70%以上。" },
-        { href: "/quiz", label: "苦手問題だけ復習", desc: "間違えた問題をもう一度解き直す。" },
+        { href: `/${examId}/quiz`, label: "模擬テストを解く", desc: "苦手分野を中心に繰り返し解く。目標70%以上。" },
+        { href: `/${examId}/quiz`, label: "苦手問題だけ復習", desc: "間違えた問題をもう一度解き直す。" },
       ],
     };
   }
@@ -61,8 +62,8 @@ function getPhase(daysLeft: number): DayPlan {
     icon: "⚡",
     color: "rose",
     tasks: [
-      { href: "/review", label: "直前チェックで総確認", desc: "頻出・混同注意・暗記項目を最終確認。" },
-      { href: "/quick", label: "一問一答で最終仕上げ", desc: "全分野を一気に流して記憶を定着させる。" },
+      { href: `/${examId}/review`, label: "直前チェックで総確認", desc: "頻出・混同注意・暗記項目を最終確認。" },
+      { href: `/${examId}/quick`, label: "一問一答で最終仕上げ", desc: "全分野を一気に流して記憶を定着させる。" },
     ],
   };
 }
@@ -77,6 +78,9 @@ const phaseTimeline = [
 ];
 
 export default function SchedulePage() {
+  const params = useParams();
+  const examId = params.examId as string;
+  const EXAM_DATE_KEY = `${examId}_exam_date`;
   const [examDate, setExamDate] = useState<string>("");
   const [inputDate, setInputDate] = useState<string>("");
   const [quizPct, setQuizPct] = useState(0);
@@ -86,9 +90,9 @@ export default function SchedulePage() {
   useEffect(() => {
     const saved = localStorage.getItem(EXAM_DATE_KEY);
     if (saved) { setExamDate(saved); setInputDate(saved); }
-    const qp = getQuizProgress();
-    const fp = getFlashcardProgress();
-    const np = getNotesProgress();
+    const qp = getQuizProgress(examId);
+    const fp = getFlashcardProgress(examId);
+    const np = getNotesProgress(examId);
     setQuizPct(Math.round((qp.answered / questions.length) * 100));
     setCardPct(Math.round((fp.masteredIds.length / flashcards.length) * 100));
     setReadCount(np.readTopics.length);
@@ -113,7 +117,7 @@ export default function SchedulePage() {
     ? Math.ceil((new Date(examDate).getTime() - today.getTime()) / 86400000)
     : null;
 
-  const plan = daysLeft !== null && daysLeft >= 0 ? getPhase(daysLeft) : null;
+  const plan = daysLeft !== null && daysLeft >= 0 ? getPhase(daysLeft, examId) : null;
   const currentPhaseIdx = plan ? phaseOrder.indexOf(plan.phase) : -1;
 
   const colorMap: Record<string, { bg: string; border: string; text: string; badge: string }> = {

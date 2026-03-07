@@ -3,27 +3,43 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-const links = [
-  { href: "/", label: "ホーム" },
-  { href: "/schedule", label: "スケジュール" },
-  { href: "/notes", label: "まとめノート" },
-  { href: "/quiz", label: "模擬テスト" },
-  { href: "/flashcards", label: "単語帳" },
-  { href: "/quick", label: "一問一答" },
-  { href: "/glossary", label: "用語集" },
-  { href: "/review", label: "直前チェック" },
+const NAV_ITEMS = [
+  { key: "", label: "ホーム" },
+  { key: "schedule", label: "スケジュール" },
+  { key: "notes", label: "まとめノート" },
+  { key: "quiz", label: "模擬テスト" },
+  { key: "flashcards", label: "単語帳" },
+  { key: "quick", label: "一問一答" },
+  { key: "glossary", label: "用語集" },
+  { key: "review", label: "直前チェック" },
 ];
 
-export default function Navbar() {
+interface NavbarProps {
+  examId: string;
+  examName: string;
+}
+
+export default function Navbar({ examId, examName }: NavbarProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const links = NAV_ITEMS.map((item) => ({
+    href: item.key === "" ? `/${examId}` : `/${examId}/${item.key}`,
+    label: item.label,
+  }));
 
   return (
     <header className="bg-indigo-700 text-white shadow-md">
       <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
-        <Link href="/" className="font-bold text-base tracking-tight whitespace-nowrap flex-shrink-0">
-          ビジ法2級 合格道場
-        </Link>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Link href="/" className="text-indigo-300 hover:text-white text-xs transition-colors whitespace-nowrap">
+            ← 資格一覧
+          </Link>
+          <span className="text-indigo-500">|</span>
+          <Link href={`/${examId}`} className="font-bold text-sm tracking-tight whitespace-nowrap">
+            {examName}
+          </Link>
+        </div>
 
         {/* Desktop nav */}
         <nav className="hidden sm:flex gap-1 overflow-x-auto">

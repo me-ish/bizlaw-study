@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { questions, TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
 import { getQuizProgress, saveQuizResult } from "@/lib/progress";
 
@@ -21,6 +22,8 @@ interface QuizResult {
 }
 
 export default function QuizPage() {
+  const params = useParams();
+  const examId = params.examId as string;
   const [mode, setMode] = useState<Mode>("select");
   const [pool, setPool] = useState(questions);
   const [idx, setIdx] = useState(0);
@@ -34,7 +37,7 @@ export default function QuizPage() {
   const startQuiz = useCallback((mode: "all" | "wrong" | Topic) => {
     let base = questions;
     if (mode === "wrong") {
-      const prog = getQuizProgress();
+      const prog = getQuizProgress(examId);
       const ids = new Set(prog.incorrectIds);
       base = questions.filter((q) => ids.has(q.id));
       if (base.length === 0) {
@@ -72,7 +75,7 @@ export default function QuizPage() {
       const finalScore = pool.length - finalWrongIds.length;
 
       // save progress (including per-topic stats)
-      saveQuizResult(pool, finalWrongIds);
+      saveQuizResult(examId, pool, finalWrongIds);
 
       setResult({ pool, score: finalScore, wrongIds: finalWrongIds });
       setMode("result");
@@ -91,7 +94,7 @@ export default function QuizPage() {
   ];
 
   if (mode === "select") {
-    const prog = getQuizProgress();
+    const prog = getQuizProgress(examId);
     return (
       <div className="space-y-6">
         <h1 className="text-xl font-bold text-slate-700">模擬テスト</h1>

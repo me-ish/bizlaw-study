@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { notes } from "@/data/notes";
 import { TOPIC_COLORS, TOPIC_LABELS } from "@/data/questions";
 import { getNotesProgress, saveNotesProgress } from "@/lib/progress";
 
 export default function NotesPage() {
+  const params = useParams();
+  const examId = params.examId as string;
   const [activeId, setActiveId] = useState<number>(1);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [readTopics, setReadTopics] = useState<Set<string>>(new Set());
@@ -12,7 +15,7 @@ export default function NotesPage() {
   const current = notes.find((n) => n.id === activeId) ?? notes[0];
 
   useEffect(() => {
-    const np = getNotesProgress();
+    const np = getNotesProgress(examId);
     setReadTopics(new Set(np.readTopics));
   }, []);
 
@@ -20,7 +23,7 @@ export default function NotesPage() {
     setReadTopics((prev) => {
       const next = new Set(prev);
       next.add(topic);
-      saveNotesProgress({ readTopics: Array.from(next) });
+      saveNotesProgress(examId, { readTopics: Array.from(next) });
       return next;
     });
   }
@@ -102,7 +105,7 @@ export default function NotesPage() {
             className="ml-2 text-slate-300 hover:text-rose-400 transition-colors"
             onClick={() => {
               setReadTopics(new Set());
-              saveNotesProgress({ readTopics: [] });
+              saveNotesProgress(examId, { readTopics: [] });
             }}
           >
             リセット
