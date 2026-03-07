@@ -59,6 +59,9 @@ export default function NotesPage() {
         <h1 className="text-xl font-bold text-slate-700">まとめノート</h1>
         <div className="flex gap-3 text-xs text-slate-500">
           <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />具体例
+          </span>
+          <span className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-rose-400" />頻出
           </span>
           <span className="flex items-center gap-1">
@@ -148,8 +151,14 @@ export default function NotesPage() {
                   {sec.points.map((pt, j) => (
                     <PointItem key={j} text={pt} />
                   ))}
+                  {sec.example && (
+                    <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
+                      <span className="text-xs font-bold text-emerald-700 mr-1.5">[具体例]</span>
+                      <span className="text-xs text-slate-700 leading-relaxed">{sec.example}</span>
+                    </div>
+                  )}
                   {sec.examTips && sec.examTips.length > 0 && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-2">
                       {sec.examTips.map((tip, k) => (
                         <ExamTip key={k} text={tip} />
                       ))}
