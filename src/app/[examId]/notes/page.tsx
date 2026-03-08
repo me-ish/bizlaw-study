@@ -137,7 +137,7 @@ export default function NotesPage() {
       <div className="space-y-2">
         {current.sections.map((sec, i) => {
           const key = `${current.id}-${i}`;
-          const isOpen = openSections[key] ?? true;
+          const isOpen = openSections[key] ?? false;
           return (
             <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <button
