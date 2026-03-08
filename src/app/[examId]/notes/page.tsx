@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { notes } from "@/data/notes";
+import type { NotePoint } from "@/data/notes";
 import { TOPIC_COLORS, TOPIC_LABELS } from "@/data/questions";
 import { getNotesProgress, saveNotesProgress } from "@/lib/progress";
 
@@ -61,9 +62,6 @@ export default function NotesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-700">まとめノート</h1>
         <div className="flex gap-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />具体例
-          </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-rose-400" />頻出
           </span>
@@ -150,16 +148,10 @@ export default function NotesPage() {
                 <span className="text-slate-400 text-lg">{isOpen ? "−" : "+"}</span>
               </button>
               {isOpen && (
-                <div className="px-5 pb-4 space-y-1.5">
-                  {sec.points.map((pt, j) => (
-                    <PointItem key={j} text={pt} />
+                <div className="px-5 pb-4 space-y-3">
+                  {sec.items.map((item, j) => (
+                    <NotePointCard key={j} item={item} />
                   ))}
-                  {sec.example && (
-                    <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
-                      <span className="text-xs font-bold text-emerald-700 mr-1.5">[具体例]</span>
-                      <span className="text-xs text-slate-700 leading-relaxed">{sec.example}</span>
-                    </div>
-                  )}
                   {sec.examTips && sec.examTips.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {sec.examTips.map((tip, k) => (
@@ -192,20 +184,22 @@ export default function NotesPage() {
   );
 }
 
-function PointItem({ text }: { text: string }) {
-  const parts = text.split(/(【[^】]*】)/g);
+function NotePointCard({ item }: { item: NotePoint }) {
   return (
-    <div className="flex gap-2 text-sm text-slate-700 leading-relaxed">
-      <span className="text-teal-400 mt-0.5 shrink-0">▸</span>
-      <p>
-        {parts.map((part, i) =>
-          part.startsWith("【") ? (
-            <strong key={i} className="text-teal-700 font-semibold">{part}</strong>
-          ) : (
-            <span key={i}>{part}</span>
-          )
-        )}
-      </p>
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      {/* 条文・概念名 */}
+      <div className="bg-teal-600 px-4 py-2">
+        <span className="text-sm font-bold text-white">{item.concept}</span>
+      </div>
+      {/* かみ砕いた説明 */}
+      <div className="px-4 py-2.5 bg-white border-b border-slate-100">
+        <p className="text-sm text-slate-700 leading-relaxed">{item.explanation}</p>
+      </div>
+      {/* 具体例 */}
+      <div className="px-4 py-2.5 bg-emerald-50">
+        <span className="text-xs font-bold text-emerald-700 mr-1.5">例)</span>
+        <span className="text-xs text-slate-700 leading-relaxed">{item.example}</span>
+      </div>
     </div>
   );
 }
