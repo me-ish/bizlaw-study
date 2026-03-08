@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { questions, TOPIC_LABELS, TOPIC_COLORS, type Topic } from "@/data/questions";
+import { getQuizProgress, saveQuickJudge } from "@/lib/progress";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -14,17 +16,36 @@ function shuffle<T>(arr: T[]): T[] {
 type Phase = "select" | "question" | "answer" | "done";
 
 export default function QuickPage() {
+  const params = useParams();
+  const examId = params.examId as string;
   const [phase, setPhase] = useState<Phase>("select");
-  const [topicFilter, setTopicFilter] = useState<Topic | "all">("all");
+  const [topicFilter, setTopicFilter] = useState<Topic | "all" | "wrong">("all");
   const [pool, setPool] = useState(questions);
   const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
+  const [wrongCount, setWrongCount] = useState(0);
+
+  useEffect(() => {
+    const prog = getQuizProgress(examId);
+    setWrongCount(prog.incorrectIds.length);
+  }, [examId]);
 
   const current = pool[idx];
 
-  function start(filter: Topic | "all") {
-    const base = filter === "all" ? questions : questions.filter((q) => q.topic === filter);
+  function start(filter: Topic | "all" | "wrong") {
+    let base = questions;
+    if (filter === "wrong") {
+      const prog = getQuizProgress(examId);
+      const ids = new Set(prog.incorrectIds);
+      base = questions.filter((q) => ids.has(q.id));
+      if (base.length === 0) {
+        alert("間違えた問題がまだありません。");
+        return;
+      }
+    } else if (filter !== "all") {
+      base = questions.filter((q) => q.topic === filter);
+    }
     setPool(shuffle(base));
     setIdx(0);
     setCorrect(0);
@@ -36,6 +57,7 @@ export default function QuickPage() {
   function handleJudge(isCorrect: boolean) {
     if (isCorrect) setCorrect((n) => n + 1);
     else setWrong((n) => n + 1);
+    saveQuickJudge(examId, current.id, isCorrect);
     if (idx + 1 >= pool.length) {
       setPhase("done");
     } else {
@@ -103,11 +125,26 @@ export default function QuickPage() {
           </div>
         </div>
 
+        {wrongCount > 0 && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-rose-700">苦手問題を集中攻略</p>
+              <p className="text-xs text-rose-500 mt-0.5">間違えた問題が <strong>{wrongCount}問</strong> あります</p>
+            </div>
+            <button
+              onClick={() => start("wrong")}
+              className="shrink-0 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors"
+            >
+              苦手のみ開始
+            </button>
+          </div>
+        )}
+
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm text-amber-800">
             <strong>使い方：</strong>問題文を読んで頭の中で答えを考え、
             「答えを見る」ボタンで正解を確認してから○×で自己採点します。
-            択一式の模擬テストより素早く回転できます。
+            ○×の結果は苦手問題リストに自動保存されます。
           </p>
         </div>
       </div>

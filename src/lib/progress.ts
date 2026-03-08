@@ -94,6 +94,25 @@ export function resetNotesProgress(examId: string) {
   localStorage.removeItem(keys(examId).notes);
 }
 
+export function saveQuickJudge(examId: string, questionId: number, isCorrect: boolean) {
+  const prev = getQuizProgress(examId);
+  let incorrectIds = [...prev.incorrectIds];
+  if (isCorrect) {
+    incorrectIds = incorrectIds.filter((id) => id !== questionId);
+  } else if (!incorrectIds.includes(questionId)) {
+    incorrectIds.push(questionId);
+  }
+  saveQuizProgress(examId, { ...prev, incorrectIds });
+}
+
+export function removeWrong(examId: string, questionId: number) {
+  const prev = getQuizProgress(examId);
+  saveQuizProgress(examId, {
+    ...prev,
+    incorrectIds: prev.incorrectIds.filter((id) => id !== questionId),
+  });
+}
+
 export function saveQuizResult(
   examId: string,
   pool: { id: number; topic: string }[],

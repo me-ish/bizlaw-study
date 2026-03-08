@@ -1,15 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getQuizProgress } from "@/lib/progress";
 
 const NAV_ITEMS = [
   { key: "", label: "ホーム" },
-  { key: "schedule", label: "スケジュール" },
   { key: "notes", label: "まとめノート" },
   { key: "quiz", label: "模擬テスト" },
-  { key: "flashcards", label: "単語帳" },
   { key: "quick", label: "一問一答" },
+  { key: "wrong", label: "苦手問題", badge: true },
+  { key: "flashcards", label: "単語帳" },
   { key: "glossary", label: "用語集" },
   { key: "review", label: "直前チェック" },
 ];
@@ -22,10 +23,17 @@ interface NavbarProps {
 export default function Navbar({ examId, examName }: NavbarProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [wrongCount, setWrongCount] = useState(0);
+
+  useEffect(() => {
+    const prog = getQuizProgress(examId);
+    setWrongCount(prog.incorrectIds.length);
+  }, [examId, pathname]);
 
   const links = NAV_ITEMS.map((item) => ({
     href: item.key === "" ? `/${examId}` : `/${examId}/${item.key}`,
     label: item.label,
+    badge: item.badge ?? false,
   }));
 
   return (
@@ -47,13 +55,18 @@ export default function Navbar({ examId, examName }: NavbarProps) {
             <Link
               key={l.href}
               href={l.href}
-              className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`relative px-3 py-1 rounded text-sm font-medium whitespace-nowrap transition-colors ${
                 pathname === l.href
                   ? "bg-white text-indigo-700"
                   : "hover:bg-indigo-600"
               }`}
             >
               {l.label}
+              {l.badge && wrongCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {wrongCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -78,13 +91,18 @@ export default function Navbar({ examId, examName }: NavbarProps) {
               key={l.href}
               href={l.href}
               onClick={() => setMenuOpen(false)}
-              className={`block px-4 py-2.5 text-sm font-medium border-b border-indigo-600 transition-colors ${
+              className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium border-b border-indigo-600 transition-colors ${
                 pathname === l.href
                   ? "bg-white text-indigo-700"
                   : "hover:bg-indigo-600"
               }`}
             >
               {l.label}
+              {l.badge && wrongCount > 0 && (
+                <span className="ml-2 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {wrongCount}
+                </span>
+              )}
             </Link>
           ))}
         </div>
