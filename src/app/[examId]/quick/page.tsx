@@ -200,6 +200,21 @@ export default function QuickPage() {
             <p className="text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
               {current.options[current.correctAnswer]}
             </p>
+            {current.keywords && current.keywords.length > 0 && (
+              <div className="pt-1">
+                <p className="text-xs font-semibold text-indigo-500 mb-1.5">💡 浮かべるべきキーワード</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {current.keywords.map((kw, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full px-2.5 py-1 font-medium"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <p className="text-xs text-slate-600 leading-relaxed pt-1">{current.explanation}</p>
           </div>
 
