@@ -4,7 +4,15 @@
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git:*)",
+      "Bash(python3 -c \" ids = [int\\(x\\) for x in open\\(''/tmp/ids.txt''\\)] for i in range\\(1, max\\(ids\\)+1\\): if i not in ids: print\\(''missing:'', i\\) print\\(''total:'', len\\(ids\\), ''max:'', max\\(ids\\)\\) \")",
+      "Bash(node -e \"const ids=require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\).trim\\(\\).split\\(''\\\\n''\\).map\\(Number\\); for\\(let i=1;i<=Math.max\\(...ids\\);i++\\){if\\(!ids.includes\\(i\\)\\)console.log\\(''missing:'',i\\)} console.log\\(''total:'',ids.length,''max:'',Math.max\\(...ids\\)\\)\")",
+      "Bash(sort -n node -e \"const ids=require\\(''fs''\\).readFileSync\\(''/tmp/ids.txt'',''utf8''\\).trim\\(\\).split\\(''\\\\n''\\).map\\(Number\\); const missing=[]; for\\(let i=1;i<=Math.max\\(...ids\\);i++\\){if\\(!ids.includes\\(i\\)\\)missing.push\\(i\\)} console.log\\(''missing:'',missing.join\\('',''\\)\\); console.log\\(''total:'',ids.length,''max:'',Math.max\\(...ids\\)\\)\")",
+      "Bash(sort -t: -k1 -n)",
+      "Read(//tmp/**)",
+      "Bash(grep:*)",
+      "WebSearch"
     ]
   }
 }
